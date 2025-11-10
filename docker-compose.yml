@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  inventory-management:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: inventory-management-app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/inventory/statistics || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - inventory-network
+
+networks:
+  inventory-network:
+    driver: bridge

@@ -1,227 +1,274 @@
 package com.warehouse.inventory.service;
 
 import com.warehouse.inventory.model.InventoryItem;
+import com.warehouse.inventory.model.StockMovement;
+import com.warehouse.inventory.model.StockMovement.MovementType;
+import com.warehouse.inventory.repository.InventoryItemRepository;
+import com.warehouse.inventory.repository.StockMovementRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-/**
- * Service class managing inventory operations using 2D array structure.
- * The 2D array represents: [category][items] where items are stored by category.
- */
 @Service
 public class InventoryService {
-    
-    // Using Map to represent 2D structure: category -> List of items
-    // This allows dynamic sizing per category while maintaining 2D array concept
-    private final Map<String, List<InventoryItem>> inventoryStore;
-    
-    // Maximum capacity per category (can be configured)
     private static final int MAX_CAPACITY_PER_CATEGORY = 1000;
-    
-    // Default low stock threshold (can be configured per item or globally)
     private static final int DEFAULT_LOW_STOCK_THRESHOLD = 10;
-    
-    public InventoryService() {
-        this.inventoryStore = new HashMap<>();
+
+    private final InventoryItemRepository inventoryRepository;
+    private final StockMovementRepository movementRepository;
+
+    public InventoryService(
+            InventoryItemRepository inventoryRepository,
+            StockMovementRepository movementRepository) {
+        this.inventoryRepository = inventoryRepository;
+        this.movementRepository = movementRepository;
     }
 
-    /**
-     * Adds a new item to inventory or updates quantity if item exists.
-     * @param item The inventory item to add
-     * @return true if added successfully, false if capacity exceeded
-     */
-    public synchronized boolean addItem(InventoryItem item) {
-        if (item == null || item.getProductId() == null) {
-            throw new IllegalArgumentException("Item and productId cannot be null");
+    @Transactional
+    public synchronized InventoryItem addItem(InventoryItem item) {
+        validateItem(item);
+        if (inventoryRepository.existsById(item.getProductId())) {
+            throw new IllegalStateException("Product ID already exists: " + item.getProductId());
+        }
+        item.setCategory(item.getCategory() != null ? item.getCategory() : "UNCATEGORIZED");
+        if (inventoryRepository.countByCategory(item.getCategory()) >= MAX_CAPACITY_PER_CATEGORY) {
+            throw new IllegalStateException("Category capacity exceeded");
         }
 
-        String category = item.getCategory() != null ? item.getCategory() : "UNCATEGORIZED";
-        List<InventoryItem> categoryItems = inventoryStore.computeIfAbsent(category, k -> new ArrayList<>());
-
-        // Check if item already exists in this category
-        OptionalInt indexOpt = findItemIndex(categoryItems, item.getProductId());
-        
-        if (indexOpt.isPresent()) {
-            // Update quantity of existing item
-            int index = indexOpt.getAsInt();
-            InventoryItem existing = categoryItems.get(index);
-            existing.setQuantity(existing.getQuantity() + item.getQuantity());
-            // Update other fields if provided
-            if (item.getProductName() != null) existing.setProductName(item.getProductName());
-            if (item.getExpirationDate() != null) existing.setExpirationDate(item.getExpirationDate());
-            if (item.getUnitPrice() > 0) existing.setUnitPrice(item.getUnitPrice());
-            return true;
-        } else {
-            // Add new item
-            if (categoryItems.size() >= MAX_CAPACITY_PER_CATEGORY) {
-                return false;
-            }
-            categoryItems.add(item);
-            return true;
+        int initialQuantity = item.getQuantity();
+        item.setQuantity(0);
+        InventoryItem saved = inventoryRepository.save(item);
+        if (initialQuantity > 0) {
+            stockIn(saved.getProductId(), initialQuantity, "system");
         }
+        return inventoryRepository.findByProductId(saved.getProductId()).orElse(saved);
     }
 
-    /**
-     * Removes an item from inventory by productId.
-     * @param productId The product ID to remove
-     * @param quantity Quantity to remove (if null or 0, removes entire item)
-     * @return true if removed successfully, false if not found
-     */
-    public synchronized boolean removeItem(String productId, Integer quantity) {
-        if (productId == null) {
-            throw new IllegalArgumentException("ProductId cannot be null");
-        }
+    @Transactional
+    public InventoryItem updateItem(String productId, InventoryItem changes) {
+        validateItem(changes);
+        InventoryItem item = inventoryRepository.findByProductIdForUpdate(productId)
+                .orElseThrow(() -> new ItemNotFoundException(productId));
 
-        for (List<InventoryItem> categoryItems : inventoryStore.values()) {
-            OptionalInt indexOpt = findItemIndex(categoryItems, productId);
-            
-            if (indexOpt.isPresent()) {
-                int index = indexOpt.getAsInt();
-                InventoryItem item = categoryItems.get(index);
-                
-                if (quantity == null || quantity <= 0 || quantity >= item.getQuantity()) {
-                    // Remove entire item
-                    categoryItems.remove(index);
-                } else {
-                    // Reduce quantity
-                    item.setQuantity(item.getQuantity() - quantity);
-                }
-                return true;
-            }
+        if (changes.getExpirationDate() != null && changes.getExpirationDate().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Expiration date cannot be in the past");
         }
-        return false;
+        if (changes.getProductId() != null && !productId.equals(changes.getProductId())) {
+            throw new IllegalArgumentException("Product ID cannot be changed");
+        }
+        if (changes.getUnitPrice() < 0 || !Double.isFinite(changes.getUnitPrice())) {
+            throw new IllegalArgumentException("Unit price cannot be negative");
+        }
+        if (changes.getReorderLevel() < 0) {
+            throw new IllegalArgumentException("Reorder level cannot be negative");
+        }
+        if (changes.getCategory() != null
+                && !changes.getCategory().isBlank()
+                && !changes.getCategory().equals(item.getCategory())
+                && inventoryRepository.countByCategory(changes.getCategory()) >= MAX_CAPACITY_PER_CATEGORY) {
+            throw new IllegalStateException("Category capacity exceeded");
+        }
+        if (changes.getProductName() != null) {
+            item.setProductName(changes.getProductName());
+        }
+        item.setExpirationDate(changes.getExpirationDate());
+        if (changes.getCategory() != null && !changes.getCategory().isBlank()) {
+            item.setCategory(changes.getCategory());
+        }
+        item.setUnitPrice(changes.getUnitPrice());
+        item.setReorderLevel(changes.getReorderLevel());
+        return inventoryRepository.save(item);
     }
 
-    /**
-     * Gets all items sorted by quantity (ascending).
-     * @return List of items sorted by quantity
-     */
+    @Transactional
+    public boolean deleteItem(String productId) {
+        Optional<InventoryItem> item = inventoryRepository.findByProductIdForUpdate(productId);
+        if (item.isEmpty()) {
+            return false;
+        }
+        if (item.get().getQuantity() > 0) {
+            stockOut(productId, item.get().getQuantity(), "system");
+        }
+        inventoryRepository.delete(item.get());
+        return true;
+    }
+
+    @Transactional
+    public StockMovement stockIn(String productId, int quantity, String user) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than zero");
+        }
+        InventoryItem item = inventoryRepository.findByProductIdForUpdate(productId)
+                .orElseThrow(() -> new ItemNotFoundException(productId));
+        try {
+            item.setQuantity(Math.addExact(item.getQuantity(), quantity));
+        } catch (ArithmeticException exception) {
+            throw new IllegalArgumentException("Quantity exceeds the supported limit");
+        }
+        inventoryRepository.save(item);
+        return movementRepository.save(new StockMovement(productId, MovementType.IN, quantity, normalizeUser(user)));
+    }
+
+    @Transactional
+    public StockMovement stockOut(String productId, int quantity, String user) {
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be greater than zero");
+        }
+        InventoryItem item = inventoryRepository.findByProductIdForUpdate(productId)
+                .orElseThrow(() -> new ItemNotFoundException(productId));
+        if (quantity > item.getQuantity()) {
+            throw new IllegalArgumentException("Stock out quantity exceeds available quantity");
+        }
+        item.setQuantity(item.getQuantity() - quantity);
+        inventoryRepository.save(item);
+        return movementRepository.save(new StockMovement(productId, MovementType.OUT, quantity, normalizeUser(user)));
+    }
+
+    @Transactional
+    public synchronized boolean removeItem(String productId, Integer requestedQuantity) {
+        InventoryItem item = inventoryRepository.findByProductIdForUpdate(productId)
+                .orElse(null);
+        if (item == null) {
+            return false;
+        }
+        int availableQuantity = item.getQuantity();
+        int quantity = requestedQuantity == null || requestedQuantity <= 0
+                ? availableQuantity
+                : Math.min(requestedQuantity, availableQuantity);
+        if (quantity > 0) {
+            stockOut(productId, quantity, "system");
+        }
+        if (requestedQuantity == null || requestedQuantity <= 0 || requestedQuantity >= availableQuantity) {
+            inventoryRepository.delete(item);
+        }
+        return true;
+    }
+
     public List<InventoryItem> getAllItemsSortedByQuantity() {
-        return inventoryStore.values().stream()
-                .flatMap(List::stream)
-                .sorted(Comparator.comparingInt(InventoryItem::getQuantity))
-                .collect(Collectors.toList());
+        return inventoryRepository.findAllByOrderByQuantityAsc();
     }
 
-    /**
-     * Gets all items sorted by expiration date (ascending - earliest first).
-     * @return List of items sorted by expiration date
-     */
     public List<InventoryItem> getAllItemsSortedByExpirationDate() {
-        return inventoryStore.values().stream()
-                .flatMap(List::stream)
-                .sorted(Comparator.comparing(InventoryItem::getExpirationDate,
-                        Comparator.nullsLast(Comparator.naturalOrder())))
-                .collect(Collectors.toList());
+        return inventoryRepository.findAllByOrderByExpirationDateAsc();
     }
 
-    /**
-     * Gets all items from a specific category.
-     * @param category The category name
-     * @return List of items in the category
-     */
     public List<InventoryItem> getItemsByCategory(String category) {
-        return inventoryStore.getOrDefault(category, new ArrayList<>());
+        return inventoryRepository.findByCategory(category);
     }
 
-    /**
-     * Gets all items across all categories.
-     * @return List of all items
-     */
     public List<InventoryItem> getAllItems() {
-        return inventoryStore.values().stream()
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+        return inventoryRepository.findAll();
     }
 
-    /**
-     * Gets a specific item by productId.
-     * @param productId The product ID
-     * @return Optional containing the item if found
-     */
+    public Page<InventoryItem> searchItems(String search, String category, boolean lowStockOnly, Pageable pageable) {
+        String normalizedSearch = search == null || search.isBlank() ? null : search.trim();
+        String normalizedCategory = category == null || category.isBlank() ? null : category.trim();
+        return inventoryRepository.searchItems(normalizedSearch, normalizedCategory, lowStockOnly, pageable);
+    }
+
+    public List<StockMovement> getMovements(String productId) {
+        return movementRepository.findAllByProductIdOrderByMovementDateDesc(productId);
+    }
+
+    public List<StockMovement> getAllMovements() {
+        return movementRepository.findAllByOrderByMovementDateDesc();
+    }
+
     public Optional<InventoryItem> getItemById(String productId) {
-        return inventoryStore.values().stream()
-                .flatMap(List::stream)
-                .filter(item -> item.getProductId().equals(productId))
-                .findFirst();
+        return inventoryRepository.findByProductId(productId);
     }
 
-    /**
-     * Gets the 2D array representation of inventory.
-     * @return Map where key is category and value is array of items
-     */
     public Map<String, InventoryItem[][]> getInventoryAs2DArray() {
         Map<String, InventoryItem[][]> result = new HashMap<>();
-        for (Map.Entry<String, List<InventoryItem>> entry : inventoryStore.entrySet()) {
+        Map<String, List<InventoryItem>> itemsByCategory = inventoryRepository.findAll().stream()
+                .collect(Collectors.groupingBy(item -> item.getCategory() != null ? item.getCategory() : "UNCATEGORIZED"));
+        for (Map.Entry<String, List<InventoryItem>> entry : itemsByCategory.entrySet()) {
             List<InventoryItem> items = entry.getValue();
-            InventoryItem[][] array = new InventoryItem[1][items.size()];
-            array[0] = items.toArray(new InventoryItem[0]);
-            result.put(entry.getKey(), array);
+            result.put(entry.getKey(), new InventoryItem[][]{items.toArray(new InventoryItem[0])});
         }
         return result;
     }
 
-    /**
-     * Gets items with low stock (quantity <= threshold).
-     * @param threshold The threshold for low stock (default: 10)
-     * @return List of items with low stock
-     */
     public List<InventoryItem> getLowStockItems(Integer threshold) {
-        int stockThreshold = threshold != null && threshold > 0 ? threshold : DEFAULT_LOW_STOCK_THRESHOLD;
-        return inventoryStore.values().stream()
-                .flatMap(List::stream)
-                .filter(item -> item.getQuantity() <= stockThreshold)
-                .sorted(Comparator.comparingInt(InventoryItem::getQuantity))
-                .collect(Collectors.toList());
+        if (threshold != null && threshold > 0) {
+            return inventoryRepository.findByQuantityLessThanEqualOrderByQuantityAsc(threshold);
+        }
+        return inventoryRepository.findAll().stream()
+                .filter(item -> item.getQuantity() <= item.getReorderLevel())
+                .sorted((first, second) -> Integer.compare(first.getQuantity(), second.getQuantity()))
+                .toList();
     }
 
-    /**
-     * Gets inventory statistics.
-     * @return Map containing statistics
-     */
     public Map<String, Object> getInventoryStatistics() {
-        int totalItems = inventoryStore.values().stream()
-                .mapToInt(List::size)
-                .sum();
-        int totalQuantity = inventoryStore.values().stream()
-                .flatMap(List::stream)
-                .mapToInt(InventoryItem::getQuantity)
-                .sum();
-        int categoriesCount = inventoryStore.size();
-        List<InventoryItem> lowStockItems = getLowStockItems(DEFAULT_LOW_STOCK_THRESHOLD);
-        int lowStockCount = lowStockItems.size();
-        
+        List<InventoryItem> allItems = inventoryRepository.findAll();
+        int totalQuantity = allItems.stream().mapToInt(InventoryItem::getQuantity).sum();
+        List<String> categories = allItems.stream()
+                .map(InventoryItem::getCategory)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalItems", totalItems);
+        stats.put("totalItems", allItems.size());
         stats.put("totalQuantity", totalQuantity);
-        stats.put("categoriesCount", categoriesCount);
-        stats.put("lowStockCount", lowStockCount);
+        stats.put("categoriesCount", categories.size());
+        stats.put("lowStockCount", allItems.stream()
+                .filter(item -> item.getQuantity() <= item.getReorderLevel()).count());
         stats.put("lowStockThreshold", DEFAULT_LOW_STOCK_THRESHOLD);
-        stats.put("categories", new ArrayList<>(inventoryStore.keySet()));
-        
+        stats.put("categories", categories);
+        stats.put("totalStockValue", allItems.stream()
+                .mapToDouble(item -> item.getQuantity() * item.getUnitPrice())
+                .sum());
+        stats.put("expiringCount", allItems.stream()
+                .filter(item -> item.getExpirationDate() != null)
+                .filter(item -> !item.getExpirationDate().isAfter(LocalDate.now().plusDays(30)))
+                .count());
+        Map<String, Integer> categoryStock = allItems.stream().collect(Collectors.groupingBy(
+                item -> item.getCategory() != null ? item.getCategory() : "Uncategorized",
+                Collectors.summingInt(InventoryItem::getQuantity)));
+        stats.put("categoryStock", categoryStock);
         return stats;
     }
 
-    /**
-     * Helper method to find item index in a category list.
-     */
-    private OptionalInt findItemIndex(List<InventoryItem> items, String productId) {
-        for (int i = 0; i < items.size(); i++) {
-            if (items.get(i).getProductId().equals(productId)) {
-                return OptionalInt.of(i);
-            }
-        }
-        return OptionalInt.empty();
+    @Transactional
+    public synchronized void clearInventory() {
+        inventoryRepository.deleteAll();
     }
 
-    /**
-     * Clears all inventory (for testing/reset purposes).
-     */
-    public synchronized void clearInventory() {
-        inventoryStore.clear();
+    private void validateItem(InventoryItem item) {
+        if (item == null || item.getProductId() == null || item.getProductId().isBlank()) {
+            throw new IllegalArgumentException("Product ID is required");
+        }
+        if (item.getQuantity() < 0) {
+            throw new IllegalArgumentException("Quantity cannot be negative");
+        }
+        if (item.getUnitPrice() < 0 || !Double.isFinite(item.getUnitPrice())) {
+            throw new IllegalArgumentException("Unit price cannot be negative");
+        }
+        if (item.getReorderLevel() < 0) {
+            throw new IllegalArgumentException("Reorder level cannot be negative");
+        }
+        if (item.getExpirationDate() != null && item.getExpirationDate().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Expiration date cannot be in the past");
+        }
+    }
+
+    private String normalizeUser(String user) {
+        return user == null || user.isBlank() ? "system" : user.trim();
+    }
+
+    public static class ItemNotFoundException extends RuntimeException {
+        public ItemNotFoundException(String productId) {
+            super("Item not found: " + productId);
+        }
     }
 }
-

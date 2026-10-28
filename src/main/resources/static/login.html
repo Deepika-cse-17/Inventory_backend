@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#103D34">
+  <title>Sign in | Warehouse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="auth-screen" aria-labelledby="loginTitle">
+    <section class="auth-panel">
+      <p class="eyebrow">Warehouse inventory</p>
+      <h1 id="loginTitle">Sign in</h1>
+      <p class="subheading" id="authSubtitle">Sign in to manage warehouse inventory.</p>
+      <form id="loginForm" class="auth-form" novalidate>
+        <div class="field" data-field="username">
+          <label for="username">Username</label>
+          <input id="username" name="username" autocomplete="username" required>
+          <small class="field-error" id="usernameError"></small>
+        </div>
+        <div class="field" data-field="password">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+          <small class="field-error" id="passwordError"></small>
+        </div>
+        <p id="loginError" class="form-error" role="alert" hidden></p>
+        <button class="button button-primary auth-submit" id="loginButton" type="submit">Login</button>
+      </form>
+      <form id="registerForm" class="auth-form" novalidate hidden>
+        <div class="field" data-field="registerUsername">
+          <label for="registerUsername">Username</label>
+          <input id="registerUsername" name="username" autocomplete="username" minlength="3" maxlength="50" required>
+          <small class="field-error" id="registerUsernameError"></small>
+        </div>
+        <div class="field" data-field="registerPassword">
+          <label for="registerPassword">Password</label>
+          <input id="registerPassword" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required>
+          <small class="field-error" id="registerPasswordError"></small>
+        </div>
+        <div class="field" data-field="confirmPassword">
+          <label for="confirmPassword">Confirm password</label>
+          <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="12" maxlength="72" required>
+          <small class="field-error" id="confirmPasswordError"></small>
+        </div>
+        <p class="auth-hint">Choose a username and a password with at least 12 characters. New accounts have standard user access.</p>
+        <p id="registerError" class="form-error" role="alert" hidden></p>
+        <button class="button button-primary auth-submit" id="registerButton" type="submit">Create account</button>
+      </form>
+      <button class="text-button" id="authModeButton" type="button">Need an account? Create one</button>
+      <p id="connectionError" class="form-error" role="alert" hidden></p>
+    </section>
+  </main>
+  <script src="login.js" defer></script>
+</body>
+</html>

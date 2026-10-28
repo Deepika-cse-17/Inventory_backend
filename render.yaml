@@ -3,6 +3,31 @@ services:
     name: inventory-management
     env: docker
     plan: free
-    dockerfilePath: ./backend/Dockerfile
+    dockerfilePath: ./Dockerfile
     autoDeploy: true
-    healthCheckPath: /api/inventory/statistics
+    healthCheckPath: /
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        value: inventory_db
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JPA_DDL_AUTO
+        value: update
+      - key: APP_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: USER_USERNAME
+        value: user
+      - key: USER_PASSWORD
+        sync: false
+      - key: SESSION_COOKIE_SECURE
+        value: "true"

@@ -1,716 +1,346 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Warehouse Inventory Management System</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            color: #667eea;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            color: #666;
-            font-size: 1.1em;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        @media (max-width: 1024px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-
-        .card h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-danger {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c0392b;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-            transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: #27ae60;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #229954;
-            transform: translateY(-2px);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .inventory-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .inventory-table th,
-        .inventory-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .inventory-table th {
-            background: #f8f9fa;
-            color: #667eea;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-        }
-
-        .inventory-table tr:hover {
-            background: #f8f9fa;
-        }
-
-        .inventory-table td {
-            color: #333;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .stat-card h3 {
-            font-size: 2em;
-            margin-bottom: 5px;
-        }
-
-        .stat-card p {
-            opacity: 0.9;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            animation: slideDown 0.3s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .low-stock-badge {
-            background: #ff6b6b;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.85em;
-            font-weight: bold;
-            margin-left: 8px;
-        }
-
-        .low-stock-row {
-            background: #fff3cd !important;
-            border-left: 4px solid #ff6b6b;
-        }
-
-        .low-stock-row:hover {
-            background: #ffeaa7 !important;
-        }
-
-        .stat-card.warning {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-        }
-
-        .remove-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9em;
-        }
-
-        .remove-btn:hover {
-            background: #c0392b;
-        }
-
-        .quantity-input {
-            width: 80px;
-            padding: 6px;
-            margin-left: 10px;
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12382d">
+  <title>Inventory | Warehouse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🏭 Warehouse Inventory Management</h1>
-            <p>Real-time inventory tracking and management system</p>
+  <div class="app-shell" id="appShell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="#dashboard" aria-label="Warehouse dashboard">
+        <span class="brand-mark" aria-hidden="true">W</span>
+        <span>Warehouse<span class="brand-caption">Inventory control</span></span>
+      </a>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav-list" aria-label="Main navigation">
+        <button class="nav-link active" type="button" data-view="dashboard">
+          <span class="nav-icon" aria-hidden="true">01</span>Dashboard
+        </button>
+        <button class="nav-link" type="button" data-view="inventory">
+          <span class="nav-icon" aria-hidden="true">02</span>Inventory
+        </button>
+        <button class="nav-link" type="button" data-movement="IN">
+          <span class="nav-icon" aria-hidden="true">03</span>Stock In
+        </button>
+        <button class="nav-link" type="button" data-movement="OUT">
+          <span class="nav-icon" aria-hidden="true">04</span>Stock Out
+        </button>
+        <button class="nav-link" type="button" data-view="history">
+          <span class="nav-icon" aria-hidden="true">05</span>History
+        </button>
+        <button class="nav-link" type="button" data-view="contact">
+          <span class="nav-icon" aria-hidden="true">06</span>Contact Us
+        </button>
+        <button class="nav-link" id="adminMessagesNav" type="button" data-view="messages" hidden>
+          <span class="nav-icon" aria-hidden="true">07</span>Messages
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <span class="status-dot" aria-hidden="true"></span>
+        Connected to inventory service
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="mobile-brand">
+          <span class="brand-mark" aria-hidden="true">W</span>
+          <span>Warehouse</span>
         </div>
+        <label class="search-box" for="searchInput">
+          <span aria-hidden="true" class="search-icon"></span>
+          <input id="searchInput" type="search" placeholder="Search name or product ID" autocomplete="off">
+          <span class="search-shortcut" aria-hidden="true">Search</span>
+        </label>
+        <button class="button button-primary" id="addItemButton" type="button">
+          <span class="button-plus" aria-hidden="true">+</span>Add item
+        </button>
+        <div class="session-controls">
+          <span id="sessionLabel" class="session-label"></span>
+          <button class="button button-outline" id="logoutButton" type="button">Logout</button>
+        </div>
+      </header>
 
-        <div id="alertContainer"></div>
-        <div id="lowStockAlert" style="display: none;"></div>
-
-        <div class="main-content">
-            <!-- Add Item Form -->
-            <div class="card">
-                <h2>➕ Add New Item</h2>
-                <form id="addItemForm">
-                    <div class="form-group">
-                        <label for="productId">Product ID *</label>
-                        <input type="text" id="productId" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="productName">Product Name *</label>
-                        <input type="text" id="productName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="quantity">Quantity *</label>
-                        <input type="number" id="quantity" min="1" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="expirationDate">Expiration Date</label>
-                        <input type="date" id="expirationDate">
-                    </div>
-                    <div class="form-group">
-                        <label for="category">Category *</label>
-                        <input type="text" id="category" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="unitPrice">Unit Price *</label>
-                        <input type="number" id="unitPrice" step="0.01" min="0" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Item</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
-                </form>
+      <div class="content">
+        <section id="dashboardView" class="view-panel">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Overview</p>
+              <h1>Inventory dashboard</h1>
+              <p class="subheading">A clear view of your stock, movement, and inventory health.</p>
             </div>
+            <div class="date-label" id="todayLabel"></div>
+          </div>
 
-            <!-- Statistics -->
-            <div class="card">
-                <h2>📊 Statistics</h2>
-                <div class="stats-grid" id="statsGrid">
-                    <div class="stat-card">
-                        <h3 id="totalItems">0</h3>
-                        <p>Total Items</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3 id="totalQuantity">0</h3>
-                        <p>Total Quantity</p>
-                    </div>
-                    <div class="stat-card">
-                        <h3 id="categoriesCount">0</h3>
-                        <p>Categories</p>
-                    </div>
-                    <div class="stat-card warning" id="lowStockCard" style="display: none;">
-                        <h3 id="lowStockCount">0</h3>
-                        <p>Low Stock Items</p>
-                    </div>
+          <section class="stat-grid" aria-label="Inventory statistics">
+            <article class="stat-card">
+              <div class="stat-header"><span>Total items</span><span class="stat-symbol">01</span></div>
+              <strong id="statItems" class="stat-value">—</strong>
+              <span class="stat-note">Distinct products</span>
+            </article>
+            <article class="stat-card">
+              <div class="stat-header"><span>Total quantity</span><span class="stat-symbol">02</span></div>
+              <strong id="statQuantity" class="stat-value">—</strong>
+              <span class="stat-note">Units on hand</span>
+            </article>
+            <article class="stat-card">
+              <div class="stat-header"><span>Categories</span><span class="stat-symbol">03</span></div>
+              <strong id="statCategories" class="stat-value">—</strong>
+              <span class="stat-note">Product groups</span>
+            </article>
+            <article class="stat-card stat-value-card">
+              <div class="stat-header"><span>Stock value</span><span class="stat-symbol">₹</span></div>
+              <strong id="statValue" class="stat-value">—</strong>
+              <span class="stat-note">Estimated inventory value</span>
+            </article>
+            <article class="stat-card stat-warning">
+              <div class="stat-header"><span>Low stock</span><span class="stat-symbol">05</span></div>
+              <strong id="statLowStock" class="stat-value">—</strong>
+              <span class="stat-note">At or below reorder level</span>
+            </article>
+            <article class="stat-card stat-alert">
+              <div class="stat-header"><span>Expiring in 30 days</span><span class="stat-symbol">06</span></div>
+              <strong id="statExpiring" class="stat-value">—</strong>
+              <span class="stat-note">Includes expired items</span>
+            </article>
+          </section>
+
+          <section class="panel chart-panel" aria-labelledby="categoryChartTitle">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Stock distribution</p>
+                <h2 id="categoryChartTitle">Stock by category</h2>
+              </div>
+              <span class="chart-unit">Units on hand</span>
+            </div>
+            <div class="category-chart" id="categoryChart" aria-live="polite">
+              <p class="chart-message">Loading category totals...</p>
+            </div>
+          </section>
+
+          <section class="panel inventory-panel" id="inventorySection">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Stock overview</p>
+                <h2>Inventory</h2>
+                <p id="inventoryCount" class="panel-subtitle">Loading inventory...</p>
+              </div>
+              <div class="table-controls">
+                <label class="control-label" for="sortSelect">Sort by</label>
+                <select class="filter-select" id="sortSelect">
+                  <option value="name">Name A–Z</option>
+                  <option value="idAsc">Product ID</option>
+                  <option value="quantityAsc">Quantity: low first</option>
+                  <option value="quantityDesc">Quantity: high first</option>
+                  <option value="expiration">Expiration: soonest</option>
+                  <option value="priceDesc">Unit price: high first</option>
+                  <option value="category">Category A–Z</option>
+                </select>
+                <label class="control-label" for="categorySelect">Category</label>
+                <select class="filter-select" id="categorySelect"><option value="">All categories</option></select>
+                <label class="toggle-label" for="lowStockToggle">
+                  <input id="lowStockToggle" type="checkbox"><span class="toggle-track"></span>
+                  Low stock only
+                </label>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="inventory-table">
+                <thead>
+                  <tr>
+                    <th scope="col">ID</th><th scope="col">Product</th><th scope="col">Category</th><th scope="col">Quantity</th>
+                    <th scope="col">Unit price</th><th scope="col">Expiration</th><th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryRows">
+                  <tr><td class="table-message" colspan="8">Loading inventory...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <span id="pageSummary">Page 1 of 1</span>
+              <div class="pagination-actions">
+                <button class="button button-outline" id="previousPage" type="button">Previous</button>
+                <button class="button button-outline" id="nextPage" type="button">Next</button>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section id="historyView" class="view-panel" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Audit trail</p>
+              <h1>Stock history</h1>
+              <p class="subheading">Recorded stock receipts and issues across your inventory.</p>
+            </div>
+            <button class="button button-outline" id="refreshHistoryButton" type="button">Refresh history</button>
+          </div>
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Recent movements</h2>
+                <p class="panel-subtitle" id="historyCount">Loading movement history...</p>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="inventory-table history-table">
+                <thead>
+                  <tr><th scope="col">Product ID</th><th scope="col">Movement</th><th scope="col">Quantity</th><th scope="col">Performed by</th><th scope="col">Date and time</th></tr>
+                </thead>
+                <tbody id="historyRows">
+                  <tr><td class="table-message" colspan="5">Loading movement history...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="contactView" class="view-panel" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Support</p>
+              <h1>Contact us</h1>
+              <p class="subheading">Send a message to the inventory team.</p>
+            </div>
+          </div>
+          <section class="panel contact-panel">
+            <form id="contactForm" class="contact-form" novalidate>
+              <div class="form-grid">
+                <div class="field" data-field="name">
+                  <label for="contactName">Name</label>
+                  <input id="contactName" name="name" maxlength="120" autocomplete="name" required>
+                  <small class="field-error" id="contact-error-name"></small>
                 </div>
-                <button class="btn btn-secondary" onclick="loadStatistics()" style="margin-top: 15px; width: 100%;">Refresh Statistics</button>
-            </div>
-        </div>
-
-        <!-- Inventory List -->
-        <div class="card">
-            <h2>📦 Inventory Items</h2>
-            <div class="controls">
-                <button class="btn btn-primary" onclick="loadAllItems()">View All Items</button>
-                <button class="btn btn-success" onclick="sortByQuantity()">Sort by Quantity</button>
-                <button class="btn btn-success" onclick="sortByExpiration()">Sort by Expiration</button>
-                <button class="btn btn-danger" onclick="viewLowStock()" style="background: #ff6b6b;">⚠️ Low Stock Alert</button>
-                <input type="text" id="categoryFilter" placeholder="Filter by category" class="form-group" style="flex: 1; max-width: 300px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
-                <button class="btn btn-secondary" onclick="filterByCategory()">Filter</button>
-                <button class="btn btn-secondary" onclick="loadAllItems()">Clear Filter</button>
-            </div>
-            <div id="inventoryContainer">
-                <div class="loading">Loading inventory...</div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const API_BASE_URL = 'http://localhost:8080/api/inventory';
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            loadAllItems();
-            loadStatistics();
-            checkLowStock();
-            
-            // Form submission
-            document.getElementById('addItemForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                addItem();
-            });
-        });
-
-        // Show alert message
-        function showAlert(message, type = 'success') {
-            const alertContainer = document.getElementById('alertContainer');
-            const alertClass = type === 'warning' ? 'alert-warning' : `alert-${type}`;
-            alertContainer.innerHTML = `
-                <div class="alert ${alertClass}">
-                    ${message}
+                <div class="field" data-field="email">
+                  <label for="contactEmail">Email</label>
+                  <input id="contactEmail" name="email" type="email" maxlength="254" autocomplete="email" required>
+                  <small class="field-error" id="contact-error-email"></small>
                 </div>
-            `;
-            const alert = alertContainer.querySelector('.alert');
-            alert.style.display = 'block';
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 5000);
-        }
+                <div class="field field-wide" data-field="message">
+                  <label for="contactMessage">Message</label>
+                  <textarea id="contactMessage" name="message" maxlength="4000" rows="6" required></textarea>
+                  <small class="field-error" id="contact-error-message"></small>
+                </div>
+              </div>
+              <p id="contactFormError" class="form-error" role="alert" hidden></p>
+              <button class="button button-primary" type="submit">Send message</button>
+            </form>
+          </section>
+        </section>
 
-        // Clear form
-        function clearForm() {
-            document.getElementById('addItemForm').reset();
-        }
+        <section id="messagesView" class="view-panel" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Admin</p>
+              <h1>Contact messages</h1>
+              <p class="subheading">Messages submitted through Contact Us.</p>
+            </div>
+            <button class="button button-outline" id="refreshMessagesButton" type="button">Refresh messages</button>
+          </div>
+          <section class="panel">
+            <p class="panel-subtitle" id="messagesCount">Loading contact messages...</p>
+            <div class="message-list" id="contactMessages" aria-live="polite"></div>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
 
-        // Add item
-        async function addItem() {
-            const item = {
-                productId: document.getElementById('productId').value,
-                productName: document.getElementById('productName').value,
-                quantity: parseInt(document.getElementById('quantity').value),
-                expirationDate: document.getElementById('expirationDate').value || null,
-                category: document.getElementById('category').value,
-                unitPrice: parseFloat(document.getElementById('unitPrice').value)
-            };
+  <dialog class="dialog" id="itemDialog" aria-labelledby="itemDialogTitle">
+    <form id="itemForm" class="dialog-form" novalidate>
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Inventory details</p>
+          <h2 id="itemDialogTitle">Add item</h2>
+          <p class="panel-subtitle" id="itemDialogSubtitle">Enter the product details and opening quantity.</p>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="itemDialog" aria-label="Close dialog">×</button>
+      </div>
+      <input type="hidden" id="formMode" value="add">
+      <div class="form-grid">
+        <div class="field" data-field="productId">
+          <label for="productId">Product ID <span>*</span></label>
+          <input id="productId" name="productId" required maxlength="100" autocomplete="off">
+          <small class="field-error" id="error-productId"></small>
+        </div>
+        <div class="field" data-field="name">
+          <label for="productName">Product name</label>
+          <input id="productName" name="name" maxlength="255" autocomplete="off">
+          <small class="field-error" id="error-name"></small>
+        </div>
+        <div class="field" data-field="quantity" id="quantityField">
+          <label for="quantity">Opening quantity <span>*</span></label>
+          <input id="quantity" name="quantity" type="number" min="0" step="1" required>
+          <small class="field-error" id="error-quantity"></small>
+        </div>
+        <div class="field" data-field="category">
+          <label for="productCategory">Category</label>
+          <input id="productCategory" name="category" maxlength="100" autocomplete="off">
+          <small class="field-error" id="error-category"></small>
+        </div>
+        <div class="field" data-field="unitPrice">
+          <label for="unitPrice">Unit price (₹) <span>*</span></label>
+          <input id="unitPrice" name="unitPrice" type="number" min="0" step="0.01" required>
+          <small class="field-error" id="error-unitPrice"></small>
+        </div>
+        <div class="field" data-field="expirationDate">
+          <label for="expirationDate">Expiration date</label>
+          <input id="expirationDate" name="expirationDate" type="date">
+          <small class="field-error" id="error-expirationDate"></small>
+        </div>
+        <div class="field" data-field="reorderLevel">
+          <label for="reorderLevel">Reorder level <span>*</span></label>
+          <input id="reorderLevel" name="reorderLevel" type="number" min="0" step="1" value="10" required>
+          <small class="field-error" id="error-reorderLevel"></small>
+        </div>
+      </div>
+      <p id="formError" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="button button-outline" type="button" data-close-dialog="itemDialog">Cancel</button>
+        <button class="button button-primary" id="saveItemButton" type="submit">Add item</button>
+      </div>
+    </form>
+  </dialog>
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/add`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(item)
-                });
+  <dialog class="dialog dialog-small" id="movementDialog" aria-labelledby="movementDialogTitle">
+    <form id="movementForm" class="dialog-form" novalidate>
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Stock movement</p>
+          <h2 id="movementDialogTitle">Stock in</h2>
+          <p class="panel-subtitle" id="movementDialogSubtitle">Record incoming units for a product.</p>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="movementDialog" aria-label="Close dialog">×</button>
+      </div>
+      <input id="movementType" type="hidden" value="IN">
+      <div class="field" data-field="productId">
+        <label for="movementProduct">Product <span>*</span></label>
+        <select id="movementProduct" name="productId" required><option value="">Select a product</option></select>
+        <small class="field-error" id="movement-error-productId"></small>
+      </div>
+      <div class="field" data-field="quantity">
+        <label for="movementQuantity">Quantity <span>*</span></label>
+        <input id="movementQuantity" name="quantity" type="number" min="1" step="1" required>
+        <small class="field-error" id="movement-error-quantity"></small>
+      </div>
+      <p class="movement-attribution">Recorded as <strong id="movementActor"></strong></p>
+      <p id="movementFormError" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions">
+        <button class="button button-outline" type="button" data-close-dialog="movementDialog">Cancel</button>
+        <button class="button button-primary" id="submitMovementButton" type="submit">Record movement</button>
+      </div>
+    </form>
+  </dialog>
 
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert('Item added successfully!', 'success');
-                    clearForm();
-                    loadAllItems();
-                    loadStatistics();
-                    checkLowStock();
-                } else {
-                    showAlert(data.message || 'Failed to add item', 'error');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            }
-        }
-
-        // Remove item
-        async function removeItem(productId, quantity = null) {
-            let url = `${API_BASE_URL}/remove/${productId}`;
-            if (quantity) {
-                url += `?quantity=${quantity}`;
-            }
-
-            if (!confirm(`Are you sure you want to remove ${quantity ? quantity + ' units of ' : ''}item ${productId}?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch(url, {
-                    method: 'DELETE'
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    showAlert(data.message || 'Item removed successfully!', 'success');
-                    loadAllItems();
-                    loadStatistics();
-                    checkLowStock();
-                } else {
-                    showAlert(data.message || 'Failed to remove item', 'error');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            }
-        }
-
-        // Remove partial quantity
-        function removePartialQuantity(productId) {
-            const quantity = prompt('Enter quantity to remove:');
-            if (quantity && quantity > 0) {
-                removeItem(productId, parseInt(quantity));
-            }
-        }
-
-        // Load all items
-        async function loadAllItems() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/all`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayItems(data.items);
-                } else {
-                    document.getElementById('inventoryContainer').innerHTML = 
-                        '<div class="empty-state">No items found</div>';
-                }
-            } catch (error) {
-                document.getElementById('inventoryContainer').innerHTML = 
-                    `<div class="alert alert-error">Error loading items: ${error.message}</div>`;
-            }
-        }
-
-        // Sort by quantity
-        async function sortByQuantity() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/sorted/quantity`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayItems(data.items);
-                    showAlert('Items sorted by quantity', 'success');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            }
-        }
-
-        // Sort by expiration
-        async function sortByExpiration() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/sorted/expiration`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayItems(data.items);
-                    showAlert('Items sorted by expiration date', 'success');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            }
-        }
-
-        // Filter by category
-        async function filterByCategory() {
-            const category = document.getElementById('categoryFilter').value;
-            if (!category) {
-                showAlert('Please enter a category', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/category/${encodeURIComponent(category)}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayItems(data.items);
-                    showAlert(`Showing ${data.count} items in category "${category}"`, 'success');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            }
-        }
-
-        // Display items in table
-        function displayItems(items) {
-            const container = document.getElementById('inventoryContainer');
-            
-            if (!items || items.length === 0) {
-                container.innerHTML = '<div class="empty-state">No items in inventory</div>';
-                return;
-            }
-
-            let html = `
-                <table class="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Product ID</th>
-                            <th>Product Name</th>
-                            <th>Quantity</th>
-                            <th>Expiration Date</th>
-                            <th>Category</th>
-                            <th>Unit Price</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-
-            items.forEach(item => {
-                const expirationDate = item.expirationDate || 'N/A';
-                const expirationClass = item.expirationDate && new Date(item.expirationDate) < new Date() ? 'style="color: red; font-weight: bold;"' : '';
-                const isLowStock = item.quantity <= 10; // Default threshold
-                const lowStockClass = isLowStock ? 'class="low-stock-row"' : '';
-                const lowStockBadge = isLowStock ? '<span class="low-stock-badge">LOW STOCK</span>' : '';
-                
-                html += `
-                    <tr ${lowStockClass}>
-                        <td><strong>${item.productId}</strong>${lowStockBadge}</td>
-                        <td>${item.productName}</td>
-                        <td style="${isLowStock ? 'color: #ff6b6b; font-weight: bold;' : ''}">${item.quantity}</td>
-                        <td ${expirationClass}>${expirationDate}</td>
-                        <td><span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.9em;">${item.category}</span></td>
-                        <td>$${item.unitPrice.toFixed(2)}</td>
-                        <td>
-                            <button class="remove-btn" onclick="removePartialQuantity('${item.productId}')">Remove Qty</button>
-                            <button class="remove-btn" onclick="removeItem('${item.productId}')" style="margin-left: 5px;">Remove All</button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += `
-                    </tbody>
-                </table>
-                <p style="margin-top: 15px; color: #666;">Total: ${items.length} items</p>
-            `;
-
-            container.innerHTML = html;
-        }
-
-        // Load statistics
-        async function loadStatistics() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/statistics`);
-                const data = await response.json();
-                
-                if (data.success && data.statistics) {
-                    document.getElementById('totalItems').textContent = data.statistics.totalItems || 0;
-                    document.getElementById('totalQuantity').textContent = data.statistics.totalQuantity || 0;
-                    document.getElementById('categoriesCount').textContent = data.statistics.categoriesCount || 0;
-                    
-                    // Update low stock count
-                    const lowStockCount = data.statistics.lowStockCount || 0;
-                    const lowStockCard = document.getElementById('lowStockCard');
-                    const lowStockCountEl = document.getElementById('lowStockCount');
-                    
-                    if (lowStockCount > 0) {
-                        lowStockCountEl.textContent = lowStockCount;
-                        lowStockCard.style.display = 'block';
-                    } else {
-                        lowStockCard.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading statistics:', error);
-            }
-        }
-
-        // Check for low stock and show alert
-        async function checkLowStock() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/low-stock`);
-                const data = await response.json();
-                
-                if (data.success && data.items && data.items.length > 0) {
-                    const alertContainer = document.getElementById('lowStockAlert');
-                    const threshold = data.threshold || 10;
-                    const count = data.items.length;
-                    
-                    alertContainer.innerHTML = `
-                        <div class="alert-warning">
-                            <div>
-                                <strong>⚠️ Low Stock Alert!</strong> 
-                                ${count} item${count > 1 ? 's' : ''} ${count > 1 ? 'are' : 'is'} running low (≤ ${threshold} units).
-                                <button class="btn btn-danger" onclick="viewLowStock()" style="margin-left: 15px; padding: 6px 15px; font-size: 0.9em;">View Low Stock Items</button>
-                            </div>
-                            <button onclick="document.getElementById('lowStockAlert').style.display='none'" style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #856404;">&times;</button>
-                        </div>
-                    `;
-                    alertContainer.style.display = 'block';
-                } else {
-                    document.getElementById('lowStockAlert').style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Error checking low stock:', error);
-            }
-        }
-
-        // View low stock items
-        async function viewLowStock() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/low-stock`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayItems(data.items);
-                    showAlert(`Showing ${data.count} low stock item${data.count > 1 ? 's' : ''} (threshold: ≤ ${data.threshold} units)`, 'warning');
-                }
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'error');
-            }
-        }
-    </script>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="script.js" defer></script>
 </body>
 </html>
-

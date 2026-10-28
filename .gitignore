@@ -22,6 +22,9 @@ buildNumber.properties
 *.iws
 *.ipr
 .vscode/
+!.vscode/
+.vscode/*
+!.vscode/mcp.json
 .classpath
 .project
 .settings/
@@ -31,3 +34,7 @@ bin/
 .DS_Store
 Thumbs.db
 
+# Local environment secrets
+.env
+.env.*
+!.env.example
